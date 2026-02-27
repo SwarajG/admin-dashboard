@@ -1,12 +1,14 @@
 {
-  "name": "admin-dashboard",
+  "name": "project-tracker",
   "private": true,
   "scripts": {
     "build": "turbo build",
     "dev": "turbo dev",
     "lint": "turbo lint",
     "type-check": "turbo type-check",
-    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\""
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",
+    "db:migrate": "turbo db:migrate",
+    "db:seed": "turbo db:seed"
   },
   "devDependencies": {
     "prettier": "^3.4.2",
