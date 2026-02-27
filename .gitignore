@@ -1,0 +1,13 @@
+node_modules
+dist
+.turbo
+.env
+.env.local
+*.log
+
+# Prisma
+packages/db/node_modules/
+
+# Build outputs
+apps/web/dist/
+apps/api/dist/
