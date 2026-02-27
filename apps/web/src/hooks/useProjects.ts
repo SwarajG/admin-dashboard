@@ -11,7 +11,7 @@ export function useProjects() {
     setIsLoading(true)
     try {
       const res = await api.get('/projects')
-      setProjects(res.data)
+      setProjects(res.data.projects)
       setError(null)
     } catch {
       setError('Failed to load projects')
@@ -37,7 +37,7 @@ export function useProject(id: string) {
     setIsLoading(true)
     try {
       const res = await api.get(`/projects/${id}`)
-      setProject(res.data)
+      setProject(res.data.project)
       setError(null)
     } catch {
       setError('Failed to load project')

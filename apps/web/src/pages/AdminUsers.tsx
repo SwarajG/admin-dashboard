@@ -21,7 +21,7 @@ export function AdminUsers() {
     setIsLoading(true)
     api
       .get('/users')
-      .then((res) => setUsers(res.data))
+      .then((res) => setUsers(res.data.users))
       .catch(() => {})
       .finally(() => setIsLoading(false))
   }

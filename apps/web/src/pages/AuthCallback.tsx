@@ -24,8 +24,8 @@ export function AuthCallback() {
     api
       .get('/auth/me')
       .then((res) => {
-        login(token, res.data)
-        toast.success(`Welcome, ${res.data.name}!`)
+        login(token, res.data.user)
+        toast.success(`Welcome, ${res.data.user.name}!`)
         navigate('/dashboard', { replace: true })
       })
       .catch(() => {

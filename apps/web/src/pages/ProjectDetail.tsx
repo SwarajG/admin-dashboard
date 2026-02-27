@@ -111,7 +111,7 @@ export function ProjectDetail() {
     setSearching(true)
     try {
       const res = await api.get('/users', { params: { search: userSearch.trim() } })
-      const allUsers: UserPublic[] = res.data
+      const allUsers: UserPublic[] = res.data.users
       const memberIds = new Set(project.members.map((m) => m.userId))
       setSearchResults(allUsers.filter((u) => !memberIds.has(u.id)))
     } catch {
