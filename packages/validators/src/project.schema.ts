@@ -3,13 +3,13 @@ import { z } from 'zod'
 export const createProjectSchema = z.object({
   name: z.string().min(1, 'Name is required').max(100),
   description: z.string().max(500).optional(),
-  deadline: z.string().datetime({ offset: true }).optional().nullable(),
+  deadline: z.string().optional().nullable(),
 })
 
 export const updateProjectSchema = z.object({
   name: z.string().min(1).max(100).optional(),
   description: z.string().max(500).optional().nullable(),
-  deadline: z.string().datetime({ offset: true }).optional().nullable(),
+  deadline: z.string().optional().nullable(),
   status: z.enum(['NOT_STARTED', 'ACTIVE', 'DONE']).optional(),
 })
 

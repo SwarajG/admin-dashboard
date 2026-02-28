@@ -4,6 +4,7 @@
   "scripts": {
     "build": "turbo build",
     "dev": "turbo dev",
+    "dev:cloud": "pnpm --filter @admin/api dev:cloud & pnpm --filter @admin/web dev",
     "lint": "turbo lint",
     "type-check": "turbo type-check",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",

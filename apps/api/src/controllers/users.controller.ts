@@ -1,4 +1,5 @@
 import { Request, Response } from 'express'
+import bcrypt from 'bcryptjs'
 import { prisma, Role } from '@repo/db'
 
 function toUserPublic(user: {
@@ -22,8 +23,11 @@ function toUserPublic(user: {
 export async function listUsers(req: Request, res: Response): Promise<void> {
   try {
     const { role } = req.query
+    const orgId = req.orgId
 
-    const where: { role?: Role } = {}
+    const where: { role?: Role; orgMembers?: object } = {
+      orgMembers: { some: { orgId } },
+    }
     if (role && ['ADMIN', 'MANAGER', 'EMPLOYEE', 'VIEWER'].includes(role as string)) {
       where.role = role as Role
     }
@@ -51,9 +55,10 @@ export async function listUsers(req: Request, res: Response): Promise<void> {
 export async function getUserById(req: Request, res: Response): Promise<void> {
   try {
     const { id } = req.params
+    const orgId = req.orgId
 
-    const user = await prisma.user.findUnique({
-      where: { id },
+    const user = await prisma.user.findFirst({
+      where: { id, orgMembers: { some: { orgId } } },
       select: {
         id: true,
         name: true,
@@ -76,10 +81,44 @@ export async function getUserById(req: Request, res: Response): Promise<void> {
   }
 }
 
+export async function createUser(req: Request, res: Response): Promise<void> {
+  try {
+    const orgId = req.orgId
+    if (!orgId) {
+      res.status(400).json({ error: 'No organisation context' })
+      return
+    }
+
+    const { name, email, password, role } = req.body
+
+    const existing = await prisma.user.findUnique({ where: { email } })
+    if (existing) {
+      res.status(409).json({ error: 'Email already in use' })
+      return
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10)
+
+    const user = await prisma.$transaction(async (tx) => {
+      const createdUser = await tx.user.create({
+        data: { name, email, password: hashedPassword, role: role || 'EMPLOYEE' },
+      })
+      await tx.orgMember.create({ data: { orgId, userId: createdUser.id } })
+      return createdUser
+    })
+
+    res.status(201).json({ user: toUserPublic(user) })
+  } catch (err) {
+    console.error('createUser error:', err)
+    res.status(500).json({ error: 'Internal server error' })
+  }
+}
+
 export async function updateUserRole(req: Request, res: Response): Promise<void> {
   try {
     const { id } = req.params
     const { role } = req.body
+    const orgId = req.orgId
 
     if (!req.user) {
       res.status(401).json({ error: 'Authentication required' })
@@ -91,7 +130,9 @@ export async function updateUserRole(req: Request, res: Response): Promise<void>
       return
     }
 
-    const existing = await prisma.user.findUnique({ where: { id } })
+    const existing = await prisma.user.findFirst({
+      where: { id, orgMembers: { some: { orgId } } },
+    })
     if (!existing) {
       res.status(404).json({ error: 'User not found' })
       return
@@ -121,6 +162,7 @@ export async function updateUserStatus(req: Request, res: Response): Promise<voi
   try {
     const { id } = req.params
     const { isActive } = req.body
+    const orgId = req.orgId
 
     if (!req.user) {
       res.status(401).json({ error: 'Authentication required' })
@@ -132,7 +174,9 @@ export async function updateUserStatus(req: Request, res: Response): Promise<voi
       return
     }
 
-    const existing = await prisma.user.findUnique({ where: { id } })
+    const existing = await prisma.user.findFirst({
+      where: { id, orgMembers: { some: { orgId } } },
+    })
     if (!existing) {
       res.status(404).json({ error: 'User not found' })
       return

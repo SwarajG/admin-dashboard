@@ -55,19 +55,20 @@ export async function listProjects(req: Request, res: Response): Promise<void> {
     }
 
     const { id: userId, role } = req.user
+    const orgId = req.orgId
 
     let projects
     if (role === 'ADMIN' || role === 'MANAGER') {
       projects = await prisma.project.findMany({
+        where: { orgId },
         include: projectInclude,
         orderBy: { createdAt: 'desc' },
       })
     } else {
       projects = await prisma.project.findMany({
         where: {
-          members: {
-            some: { userId },
-          },
+          orgId,
+          members: { some: { userId } },
         },
         include: projectInclude,
         orderBy: { createdAt: 'desc' },
@@ -89,8 +90,15 @@ export async function createProject(req: Request, res: Response): Promise<void> 
     }
 
     const { role, id: userId } = req.user
+    const orgId = req.orgId
+
     if (role !== 'ADMIN' && role !== 'MANAGER') {
       res.status(403).json({ error: 'Insufficient permissions' })
+      return
+    }
+
+    if (!orgId) {
+      res.status(400).json({ error: 'No organisation context' })
       return
     }
 
@@ -102,6 +110,7 @@ export async function createProject(req: Request, res: Response): Promise<void> 
         description,
         deadline: deadline ? new Date(deadline) : null,
         ownerId: userId,
+        orgId,
       },
       include: projectInclude,
     })
@@ -122,9 +131,10 @@ export async function getProjectById(req: Request, res: Response): Promise<void>
 
     const { id } = req.params
     const { id: userId, role } = req.user
+    const orgId = req.orgId
 
-    const project = await prisma.project.findUnique({
-      where: { id },
+    const project = await prisma.project.findFirst({
+      where: { id, orgId },
       include: {
         owner: { select: { id: true, name: true, email: true } },
         members: {
@@ -158,7 +168,6 @@ export async function getProjectById(req: Request, res: Response): Promise<void>
       return
     }
 
-    // Check access for EMPLOYEE/VIEWER
     if (role === 'EMPLOYEE' || role === 'VIEWER') {
       const isMember = project.members.some((m) => m.userId === userId)
       if (!isMember) {
@@ -227,13 +236,14 @@ export async function updateProject(req: Request, res: Response): Promise<void> 
 
     const { id } = req.params
     const { role, id: userId } = req.user
+    const orgId = req.orgId
 
     if (role === 'EMPLOYEE' || role === 'VIEWER') {
       res.status(403).json({ error: 'Insufficient permissions' })
       return
     }
 
-    const project = await prisma.project.findUnique({ where: { id } })
+    const project = await prisma.project.findFirst({ where: { id, orgId } })
     if (!project) {
       res.status(404).json({ error: 'Project not found' })
       return
@@ -273,13 +283,14 @@ export async function deleteProject(req: Request, res: Response): Promise<void> 
 
     const { id } = req.params
     const { role, id: userId } = req.user
+    const orgId = req.orgId
 
     if (role === 'EMPLOYEE' || role === 'VIEWER') {
       res.status(403).json({ error: 'Insufficient permissions' })
       return
     }
 
-    const project = await prisma.project.findUnique({ where: { id } })
+    const project = await prisma.project.findFirst({ where: { id, orgId } })
     if (!project) {
       res.status(404).json({ error: 'Project not found' })
       return
@@ -309,19 +320,19 @@ export async function updateProjectStatus(req: Request, res: Response): Promise<
     const { id } = req.params
     const { role, id: userId } = req.user
     const { status } = req.body
+    const orgId = req.orgId
 
     if (role === 'VIEWER') {
       res.status(403).json({ error: 'Insufficient permissions' })
       return
     }
 
-    const project = await prisma.project.findUnique({ where: { id } })
+    const project = await prisma.project.findFirst({ where: { id, orgId } })
     if (!project) {
       res.status(404).json({ error: 'Project not found' })
       return
     }
 
-    // EMPLOYEE must be a member of the project
     if (role === 'EMPLOYEE') {
       const membership = await prisma.projectMember.findUnique({
         where: { projectId_userId: { projectId: id, userId } },
@@ -353,11 +364,12 @@ export async function getDashboardStats(req: Request, res: Response): Promise<vo
     }
 
     const { role, id: userId } = req.user
+    const orgId = req.orgId
     const isAdminOrManager = role === 'ADMIN' || role === 'MANAGER'
 
     const projectWhere = isAdminOrManager
-      ? {}
-      : { members: { some: { userId } } }
+      ? { orgId }
+      : { orgId, members: { some: { userId } } }
 
     const [totalProjects, activeProjects, doneProjects, notStartedProjects, openBlockers, upcomingProjects, myMemberships] =
       await Promise.all([
@@ -368,7 +380,8 @@ export async function getDashboardStats(req: Request, res: Response): Promise<vo
         prisma.blocker.count({
           where: {
             status: 'OPEN',
-            ...(isAdminOrManager ? {} : { project: { members: { some: { userId } } } }),
+            project: { orgId },
+            ...(isAdminOrManager ? {} : { project: { orgId, members: { some: { userId } } } }),
           },
         }),
         prisma.project.findMany({
@@ -383,7 +396,7 @@ export async function getDashboardStats(req: Request, res: Response): Promise<vo
           orderBy: { deadline: 'asc' },
         }),
         prisma.project.findMany({
-          where: { members: { some: { userId } } },
+          where: { orgId, members: { some: { userId } } },
           include: projectInclude,
           orderBy: { createdAt: 'desc' },
         }),

@@ -7,6 +7,7 @@ import * as authController from '../controllers/auth.controller'
 
 const router = Router()
 
+router.get('/setup-status', authController.setupStatus)
 router.post('/register', validate(registerSchema), authController.register)
 router.post('/login', validate(loginSchema), authController.login)
 router.post('/logout', authController.logout)

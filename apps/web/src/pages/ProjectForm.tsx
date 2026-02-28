@@ -76,7 +76,7 @@ export function ProjectForm() {
       } else {
         const res = await api.post('/projects', payload)
         toast.success('Project created')
-        navigate(`/projects/${res.data.id}`)
+        navigate(`/projects/${res.data.project.id}`)
       }
     } catch {
       // error handled globally

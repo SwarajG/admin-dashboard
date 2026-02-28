@@ -38,6 +38,10 @@ export async function authenticate(req: Request, res: Response, next: NextFuncti
       role: user.role,
       isActive: user.isActive,
     }
+
+    const membership = await prisma.orgMember.findFirst({ where: { userId: user.id } })
+    req.orgId = membership?.orgId
+
     next()
   } catch {
     res.status(401).json({ error: 'Invalid token' })

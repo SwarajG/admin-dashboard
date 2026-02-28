@@ -42,19 +42,14 @@ export function configurePassport(): void {
             if (!user) {
               user = await prisma.user.findUnique({ where: { email } })
               if (user) {
+                // Link Google ID to existing admin-created account
                 user = await prisma.user.update({
                   where: { id: user.id },
                   data: { googleId: profile.id },
                 })
               } else {
-                user = await prisma.user.create({
-                  data: {
-                    email,
-                    name: profile.displayName || email.split('@')[0],
-                    googleId: profile.id,
-                    role: 'EMPLOYEE',
-                  },
-                })
+                // No account found — deny access (admin-only registration)
+                return done(null, false)
               }
             }
 

@@ -4,10 +4,12 @@ import usersRouter from './users.routes'
 import projectsRouter from './projects.routes'
 import remindersRouter from './reminders.routes'
 import blockersRouter from './blockers.routes'
+import orgRouter from './org.routes'
 
 const router = Router()
 
 router.use('/auth', authRouter)
+router.use('/orgs', orgRouter)
 router.use('/users', usersRouter)
 router.use('/projects', projectsRouter)
 router.use('/reminders', remindersRouter)

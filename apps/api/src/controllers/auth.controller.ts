@@ -21,9 +21,33 @@ function toUserPublic(user: {
   }
 }
 
+function slugify(name: string): string {
+  return name
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '')
+}
+
+export async function setupStatus(_req: Request, res: Response): Promise<void> {
+  const orgCount = await prisma.organisation.count()
+  res.json({ orgExists: orgCount > 0 })
+}
+
 export async function register(req: Request, res: Response): Promise<void> {
   try {
-    const { name, email, password } = req.body
+    const { name, email, password, orgName } = req.body
+
+    const orgCount = await prisma.organisation.count()
+    if (orgCount > 0) {
+      res.status(403).json({ error: 'Registration is closed. Contact your admin.' })
+      return
+    }
+
+    if (!orgName || orgName.trim().length < 2) {
+      res.status(400).json({ error: 'Organisation name is required (min 2 characters)' })
+      return
+    }
 
     const existing = await prisma.user.findUnique({ where: { email } })
     if (existing) {
@@ -33,13 +57,24 @@ export async function register(req: Request, res: Response): Promise<void> {
 
     const hashedPassword = await bcrypt.hash(password, 10)
 
-    const user = await prisma.user.create({
-      data: {
-        name,
-        email,
-        password: hashedPassword,
-        role: 'EMPLOYEE',
-      },
+    const baseSlug = slugify(orgName)
+    let slug = baseSlug
+    let suffix = 1
+    while (await prisma.organisation.findUnique({ where: { slug } })) {
+      slug = `${baseSlug}-${suffix++}`
+    }
+
+    const [org, user] = await prisma.$transaction(async (tx) => {
+      const createdOrg = await tx.organisation.create({
+        data: { name: orgName.trim(), slug },
+      })
+      const createdUser = await tx.user.create({
+        data: { name, email, password: hashedPassword, role: 'ADMIN' },
+      })
+      await tx.orgMember.create({
+        data: { orgId: createdOrg.id, userId: createdUser.id },
+      })
+      return [createdOrg, createdUser]
     })
 
     const token = signToken({ id: user.id, email: user.email, role: user.role })
@@ -47,6 +82,7 @@ export async function register(req: Request, res: Response): Promise<void> {
     res.status(201).json({
       token,
       user: toUserPublic(user),
+      org: { id: org.id, name: org.name, slug: org.slug },
     })
   } catch (err) {
     console.error('register error:', err)

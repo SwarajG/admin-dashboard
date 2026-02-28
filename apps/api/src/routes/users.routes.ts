@@ -9,6 +9,7 @@ const router = Router()
 
 router.use(authenticate, requireAdmin)
 router.get('/', usersController.listUsers)
+router.post('/', usersController.createUser)
 router.get('/:id', usersController.getUserById)
 router.patch('/:id/role', validate(updateUserRoleSchema), usersController.updateUserRole)
 router.patch('/:id/status', validate(updateUserStatusSchema), usersController.updateUserStatus)
