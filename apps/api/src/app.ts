@@ -15,7 +15,7 @@ configurePassport()
 app.use(helmet())
 app.use(
   cors({
-    origin: '*',
+    origin: process.env.FRONTEND_URL,
     credentials: true,
   })
 )
