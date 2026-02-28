@@ -1,0 +1,6 @@
+{
+  "buildCommand": "turbo build --filter=@admin/web",
+  "outputDirectory": "apps/web/dist",
+  "installCommand": "pnpm install",
+  "framework": null
+}
